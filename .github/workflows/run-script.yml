@@ -8,9 +8,10 @@ on:
 jobs:
   run-script:
     runs-on: ubuntu-latest
+    timeout-minutes: 30  # 设置30分钟超时
 
     steps:
-    # 检出代码仓库
+    # 检出代码仓库（更新到最新版本）
     - name: Checkout repository
       uses: actions/checkout@v4
 
@@ -23,8 +24,7 @@ jobs:
     # 安装依赖（根据脚本需要添加）
     - name: Install dependencies
       run: |
-        pip install requests
-        pip install beautifulsoup4
+        pip install requests beautifulsoup4
         # 添加其他必要的Python包
 
     # 下载目标脚本
@@ -36,12 +36,13 @@ jobs:
     - name: Run Python script
       run: python 福田e家_Loader.py
 
-    # 可选：上传运行结果（如有输出文件）
+    # 上传运行结果（使用最新版本的Artifact操作）
     - name: Upload output
       if: ${{ always() }}
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: script-output
         path: |
           output.*  # 替换为实际输出文件
           logs.*
+        retention-days: 7  # 设置文件保留天数
