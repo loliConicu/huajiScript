@@ -1,48 +1,47 @@
-name: Run Python Script
+name: 福田e家签到任务
 
 on:
   workflow_dispatch:  # 允许手动触发
   schedule:
-    - cron: '0 0 * * *'  # 每天UTC时间00:00自动运行（可选）
+    # 每天北京时间上午9点运行（UTC时间1:00）
+    - cron: '0 1 * * *'
+  push:
+    paths:
+      - '福田e家_Loader.py'  # 当此脚本更新时自动运行
 
 jobs:
-  run-script:
+  run-futian:
     runs-on: ubuntu-latest
-    timeout-minutes: 30  # 设置30分钟超时
+    env:
+      TZ: Asia/Shanghai  # 设置时区为中国标准时间
 
     steps:
-    # 检出代码仓库（更新到最新版本）
-    - name: Checkout repository
+    - name: 检出代码
       uses: actions/checkout@v4
 
-    # 设置Python环境
-    - name: Set up Python
-      uses: actions/setup-python@v5
+    - name: 设置Python环境
+      uses: actions/setup-python@v4
       with:
         python-version: '3.10'  # 指定Python版本
 
-    # 安装依赖（根据脚本需要添加）
-    - name: Install dependencies
+    - name: 安装依赖
       run: |
-        pip install requests beautifulsoup4
-        # 添加其他必要的Python包
-
-    # 下载目标脚本
-    - name: Download target script
-      run: |
-        wget https://raw.githubusercontent.com/huaji8/huajiScript/bbd521fe54468c755e3882681baaaad2b24b1/福田e家_Loader.py
-
-    # 运行Python脚本
-    - name: Run Python script
+        python -m pip install --upgrade pip
+        pip install requests pycryptodome
+        
+    - name: 运行福田e家签到脚本
       run: python 福田e家_Loader.py
+      env:
+        # 从GitHub Secrets获取敏感信息
+        USERNAME: ${{ secrets.FUTIAN_USERNAME }}
+        PASSWORD: ${{ secrets.FUTIAN_PASSWORD }}
+        # 可添加其他所需环境变量
 
-    # 上传运行结果（使用最新版本的Artifact操作）
-    - name: Upload output
-      if: ${{ always() }}
-      uses: actions/upload-artifact@v4
+    - name: 上传日志（可选）
+      uses: actions/upload-artifact@v3
+      if: always()  # 无论任务成功失败都上传
       with:
-        name: script-output
+        name: futian-logs
         path: |
-          output.*  # 替换为实际输出文件
-          logs.*
-        retention-days: 7  # 设置文件保留天数
+          *.log
+          *.txt
