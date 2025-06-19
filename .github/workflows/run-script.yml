@@ -18,10 +18,10 @@ jobs:
 
     steps:
     - name: 检出代码
-      uses: actions/checkout@v4  # 使用最新版本
+      uses: actions/checkout@v4
 
     - name: 设置Python环境
-      uses: actions/setup-python@v4  # 使用最新版本
+      uses: actions/setup-python@v4
       with:
         python-version: '3.10'  # 指定Python版本
 
@@ -30,18 +30,25 @@ jobs:
         python -m pip install --upgrade pip
         pip install requests pycryptodome
         
+    - name: 调试信息（用于问题排查）
+      run: |
+        echo "当前工作目录: $(pwd)"
+        echo "文件列表:"
+        ls -la
+        echo "Python版本:"
+        python --version
+        echo "huaji_futian变量: $huaji_futian"
+        echo "USERNAME变量: $USERNAME"
+        
     - name: 运行福田e家签到脚本
       run: python 福田e家_Loader.py
       env:
         # 从GitHub Secrets获取敏感信息
-        USERNAME: ${{ secrets.FUTIAN_USERNAME }}
-        PASSWORD: ${{ secrets.FUTIAN_PASSWORD }}
-        # 可添加其他所需环境变量
-
-    # 更新后的日志上传步骤
+        huaji_futian: ${{ secrets.HUAJI_FUTIAN }}  # 关键添加
+        
     - name: 上传日志
       if: always()  # 无论任务成功失败都上传
-      uses: actions/upload-artifact@v4  # 使用最新版本
+      uses: actions/upload-artifact@v4
       with:
         name: futian-logs
         path: |
