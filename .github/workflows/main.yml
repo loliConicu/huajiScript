@@ -26,15 +26,7 @@ jobs:
       run: |
         pip install requests pycryptodome ntplib
         
-    - name: 创建配置文件
-      run: |
-        # 创建huaji_ltyd文件
-        echo "${{ secrets.HUAJI_LTYD }}" > huaji_ltyd
-        
-        # 安全验证（只显示部分信息）
-        echo "配置文件已创建，首行预览:"
-        head -n 1 huaji_ltyd | awk -F'#' '{print $1"#"$2"#... [token_online长度:"length($3)"]#... [appid长度:"length($4)"]#"$5}'
-        
+    
     - name: 运行联通任务脚本
       run: |
         # 设置多线程（根据账号数量）
@@ -43,6 +35,10 @@ jobs:
         
         # 执行脚本
         python 联通_Loader.py --threads $THREADS
+
+        env:
+        # 从GitHub Secrets获取敏感信息
+        huaji_ltyd: ${{ secrets.HUAJI_LTYD }}  # 关键添加
         
     - name: 上传日志
       if: always()
