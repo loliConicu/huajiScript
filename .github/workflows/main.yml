@@ -1,7 +1,7 @@
-name: 联通App每日任务
+name: 联通App每日任务（指定脚本运行）
 
 on:
-  workflow_dispatch:  # 手动触发
+  workflow_dispatch:  # 允许手动触发
   schedule:
     - cron: '0 3 * * *'   # 北京时间11:00
     - cron: '30 3 * * *'  # 北京时间11:30
