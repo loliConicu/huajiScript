@@ -31,7 +31,7 @@ jobs:
     
     - name: 获取当前时间
       uses: josStorer/get-current-time@v2.0.2
-      id: current-time
+      id: get-time  # 修改ID为get-time
       with:
         format: YYYY-MM-DD HH:mm:ss
         utcOffset: "+08:00"
@@ -45,7 +45,7 @@ jobs:
         python --version
         echo "huaji_futian变量: $huaji_futian"
         echo "USERNAME变量: $USERNAME"
-        echo "当前北京时间: ${{ steps.current-time.outputs.formattedTime }}"
+        echo "当前北京时间: ${{ steps.get-time.outputs.formattedTime }}"
         
     - name: 运行福田e家签到脚本
       id: run-script
@@ -69,94 +69,52 @@ jobs:
         huaji_futian: ${{ secrets.HUAJI_FUTIAN }}  # 关键添加
       continue-on-error: true
     
-    # 成功时发送Server酱通知
-    - name: 发送成功通知
-      if: steps.run-script.outputs.status == 'success'
-      uses: easychen/github-action-server-chan@v1.0.0
-      with:
-        sendkey: ${{ secrets.SERVERCHAN_SENDKEY }}
-        title: "✅ 福田e家签到成功"
-        desp: |
-          ## 🎉 福田e家自动签到成功
-          
-          **📅 执行时间：** ${{ steps.current-time.outputs.formattedTime }}
-          
-          **📁 仓库：** `${{ github.repository }}`
-          
-          **🌿 分支：** `${{ github.ref_name }}`
-          
-          **✅ 状态：** 签到成功
-          
-          **💬 消息：** ${{ steps.run-script.outputs.message }}
-          
-          **🔗 查看详情：** [点击查看运行日志](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          
-          ---
-          *福田e家自动签到任务 - 每日早上6点执行*
-    
-    # 失败时发送Server酱通知
-    - name: 发送失败通知
-      if: failure()
-      uses: easychen/github-action-server-chan@v1.0.0
-      with:
-        sendkey: ${{ secrets.SERVERCHAN_SENDKEY }}
-        title: "❌ 福田e家签到失败"
-        desp: |
-          ## ⚠️ 福田e家自动签到失败
-          
-          **📅 执行时间：** ${{ steps.current-time.outputs.formattedTime }}
-          
-          **📁 仓库：** `${{ github.repository }}`
-          
-          **🌿 分支：** `${{ github.ref_name }}`
-          
-          **❌ 状态：** 签到失败
-          
-          **💬 错误信息：** ${{ steps.run-script.outputs.message || '福田e家签到过程中发生未知错误' }}
-          
-          **🔗 查看详情：** [点击查看运行日志](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          
-          **🔧 可能的原因：**
-          - 网络连接问题
-          - 账号信息配置错误
-          - 福田e家服务异常
-          - 脚本依赖问题
-          
-          **💡 建议操作：**
-          - 检查 HUAJI_FUTIAN 密钥配置
-          - 查看详细运行日志
-          - 手动触发工作流测试
-          
-          ---
-          *福田e家自动签到任务 - 请及时处理*
-    
-    # 超时或取消时发送通知
-    - name: 发送超时/取消通知
-      if: cancelled()
-      uses: easychen/github-action-server-chan@v1.0.0
-      with:
-        sendkey: ${{ secrets.SERVERCHAN_SENDKEY }}
-        title: "⚠️ 福田e家签到任务被取消"
-        desp: |
-          ## 📋 福田e家任务执行取消
-          
-          **📅 执行时间：** ${{ steps.current-time.outputs.formattedTime }}
-          
-          **📁 仓库：** `${{ github.repository }}`
-          
-          **⚠️ 状态：** 任务被取消或超时
-          
-          **🔗 查看详情：** [点击查看运行日志](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-          
-          ---
-          *福田e家自动签到任务*
-        
     - name: 上传日志
       if: always()  # 无论任务成功失败都上传
       uses: actions/upload-artifact@v4
       with:
-        name: futian-logs-${{ steps.current-time.outputs.formattedTime }}
+        name: futian-logs-${{ steps.get-time.outputs.formattedTime }}
         path: |
           *.log
           *.txt
         retention-days: 7  # 设置文件保留天数
+        
+    # ======== 新的Server酱通知服务 ========
+    - name: Server酱通知
+      if: always()  # 确保在任何状态下都发送通知
+      run: |
+        # 设置发送参数
+        SENDKEY="${{ secrets.SERVERCHAN_SENDKEY }}"
+        TITLE=""
+        DESP=""
+        
+        # 设置通知模板
+        NOTIFICATION=$(cat <<EOF
+        **📅 执行时间：** ${{ steps.get-time.outputs.formattedTime }}
+        **📁 仓库：** ${{ github.repository }}
+        **🌿 分支：** ${{ github.ref_name }}
+        **🔗 运行日志：** [${{ github.workflow }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+        EOF
+        )
+        
+        # 根据不同状态设置消息
+        if [ "${{ job.status }}" == "success" ]; then
+          TITLE="✅ 福田e家签到成功 - ${{ steps.get-time.outputs.formattedTime }}"
+          DESP="## 🎉 签到任务执行成功\n\n$NOTIFICATION\n**💬 消息：** ${{ steps.run-script.outputs.message }}"
+          
+        elif [ "${{ job.status }}" == "cancelled" ]; then
+          TITLE="⚠️ 任务取消 - ${{ steps.get-time.outputs.formattedTime }}"
+          DESP="## 🚫 任务执行被取消\n\n$NOTIFICATION\n**🔔 提示：** 任务超时或被手动取消"
+          
+        else
+          TITLE="❌ 福田e家签到失败 - ${{ steps.get-time.outputs.formattedTime }}"
+          DESP="## ⚠️ 签到任务执行失败\n\n$NOTIFICATION\n**💬 错误信息：** ${{ steps.run-script.outputs.message || '未知错误' }}\n\n**🛠 常见问题：**\n- 检查账户凭据有效性\n- 验证网络连接状态\n- 查看脚本依赖完整性\n- 确认服务端接口变更"
+        fi
+        
+        # 发送Server酱通知
+        curl -s -X POST \
+          -d "title=${TITLE}" \
+          -d "desp=${DESP}" \
+          "https://sctapi.ftqq.com/${SENDKEY}.send"
+          
+        echo "Server酱通知已发送 [${{ job.status }}]"
